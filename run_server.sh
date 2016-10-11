@@ -1,11 +1,11 @@
 #!/bin/bash
 
 case "$1" in
-    ad-events)
+    ad)
         echo "Starting 'ad-events' server"
         nc -vv -l 7777 | ./ad-events_producer.sh
         ;;
-    network-test)
+    net)
         echo "Starting 'network-test' server"
         nc -vv -l 7777 | ./network-test_producer.sh
         ;;
