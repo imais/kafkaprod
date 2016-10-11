@@ -228,7 +228,7 @@
                (if (> cur (+ t 100))
                  (println "Falling behind by:" (- cur t) "ms")))
              )
-          (send p (record "comm-test" (make-array Byte/TYPE length))))))))
+          (send p (record "network-test" (make-array Byte/TYPE length))))))))
           ;; (def data (byte-array length))
           ;; (java.util.Arrays/fill data (byte 0x7F))
           ;; (send p (record "comm-test" data)))))))
