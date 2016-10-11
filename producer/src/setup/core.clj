@@ -224,10 +224,10 @@
 ;;          (println "t = " t ", cur = " cur)
           (if (> t cur)
             (Thread/sleep (- t cur))
-             (future
-               (if (> cur (+ t 100))
-                 ;; (println "Falling behind by:" (- cur t) "ms")))
-             )
+             ;; (future
+             ;;   (if (> cur (+ t 100))
+             ;;     (println "Falling behind by:" (- cur t) "ms")))
+            )
           (send p (record "network-test" (make-array Byte/TYPE length))))))))
           ;; (def data (byte-array length))
           ;; (java.util.Arrays/fill data (byte 0x7F))
