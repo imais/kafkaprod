@@ -228,12 +228,68 @@
              ;;   (if (> cur (+ t 100))
              ;;     (println "Falling behind by:" (- cur t) "ms")))
             )
-          (send p (record "network-test" (make-array Byte/TYPE length))))))))
+          ;; (send p (record "network-test" (make-array Byte/TYPE length))))))))
+          (send p (record "test-event" (make-array Byte/TYPE length))))))))
           ;; (def data (byte-array length))
           ;; (java.util.Arrays/fill data (byte 0x7F))
           ;; (send p (record "comm-test" data)))))))
           ;; (send p (record "comm-test" data) run-callback))))))
-                          
+
+;http://blog.raphinou.com/2009/03/generate-random-string-in-clojure.html
+(defn rand-str [length]
+  (let [ascii-codes (concat (range 48 58) (range 65 91) (range 97 123))]
+    (apply str (repeatedly length #(char (rand-nth ascii-codes)))))) 
+
+(defn send-rand-text [throughput length kafka-hosts]
+  (println "Running, emitting" throughput "tuples of length" length "per second.")
+  (println "kafka-hosts = " kafka-hosts)
+  (let [start-time-ns (* 1000000 (System/currentTimeMillis))
+        period-ns (long (/ 1000000000 throughput))
+        times (map #(+ (* period-ns %) start-time-ns) (range))]
+    (with-open [p (producer {"bootstrap.servers" kafka-hosts}
+                            (byte-array-serializer)
+                            (byte-array-serializer))]
+      (doseq [t times]
+        (let [cur (System/currentTimeMillis)
+              t (long (/ t 1000000))]
+;;          (println "t = " t ", cur = " cur)
+          (if (> t cur)
+            (Thread/sleep (- t cur))
+             ;; (future
+             ;;   (if (> cur (+ t 100))
+             ;;     (println "Falling behind by:" (- cur t) "ms")))
+            )
+          (send p (record "test-event" (.getBytes (rand-str length)))))))))
+
+(defn load-lines [file]
+  (with-open [rdr (clojure.java.io/reader file)]
+             (doall (line-seq rdr))))
+
+(defn test-lines [file]
+  (let [lines (load-lines file)]
+    (println (rand-nth lines))))
+
+(defn send-file [throughput input-file kafka-hosts]
+  (println "Running, emitting" throughput "tuples per second using" input-file ".")
+  (println "kafka-hosts = " kafka-hosts)
+  (let [start-time-ns (* 1000000 (System/currentTimeMillis))
+        period-ns (long (/ 1000000000 throughput))
+        times (map #(+ (* period-ns %) start-time-ns) (range))
+        file-lines (load-lines input-file)]
+    (with-open [p (producer {"bootstrap.servers" kafka-hosts}
+                            (byte-array-serializer)
+                            (byte-array-serializer))]
+      (doseq [t times]
+        (let [cur (System/currentTimeMillis)
+              t (long (/ t 1000000))]
+;;          (println "t = " t ", cur = " cur)
+          (if (> t cur)
+            (Thread/sleep (- t cur))
+             ;; (future
+             ;;   (if (> cur (+ t 100))
+             ;;     (println "Falling behind by:" (- cur t) "ms")))
+            )
+          (send p (record "test-event" (.getBytes (rand-nth file-lines)))))))))
 
 (defn do-new-setup [redis-host]
   ;; Hook up the redis DB
@@ -300,6 +356,11 @@
    ["-t" "--throughput COUNT" "Should be used with '-r'. This is the number of tuples per second to emit. (Obviously it can't emit ridiculous numbers per second.)"
     :default 0
     :parse-fn #(Long/parseLong %)]
+   ["-e" "--rand-text" "Send random texts to kafka at a particular frequency. This is used for the real-time simulation. Frequency specified with other options."]
+   ["-f" "--file" "Send file to kafka at a particular frequency line by line. This is used for the real-time simulation. Frequency specified with other options."]
+   ["-i" "--input-file PATH" "Path to input text file"
+    :default "./input.txt"
+    :parse-fn #(String/valueOf %)]
    ["-w" "--with-skew" "Add minor skew and late tuples into the mix."]
    ["-g" "--get-stats" "Read through redis and collect stats on end-to-end latency and so forth for the real-time simulation."]
    ["-a" "--configPath PATH" "Path to config yaml file"
@@ -319,5 +380,7 @@
       (:new options)                          (do-new-setup redis-host)
       (:run options)                          (run (:throughput options) (:with-skew options) kafka-hosts redis-host)
       (:bytes options)                        (send-bytes (:throughput options) (:length options) kafka-hosts)
+      (:rand-text options)                    (send-rand-text (:throughput options) (:length options) kafka-hosts)
+      (:file options)                         (send-file (:throughput options) (:input-file options) kafka-hosts)
       (:get-stats options)                    (get-stats redis-host)
       :else                                   (println summary))))
