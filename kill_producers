@@ -1,0 +1,6 @@
+#!/bin/bash
+
+while read pid; do
+    echo "kill ${pid}"
+    kill -9 ${pid}
+done < child_pids
