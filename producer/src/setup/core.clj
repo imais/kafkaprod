@@ -240,12 +240,17 @@
   (let [ascii-codes (concat (range 48 58) (range 65 91) (range 97 123))]
     (apply str (repeatedly length #(char (rand-nth ascii-codes)))))) 
 
+(defn rand-lines [length num-lines]
+  (for [x (range num-lines)] (rand-str length)))
+
 (defn send-rand-text [throughput length kafka-hosts]
   (println "Running, emitting" throughput "tuples of length" length "per second.")
   (println "kafka-hosts = " kafka-hosts)
   (let [start-time-ns (* 1000000 (System/currentTimeMillis))
         period-ns (long (/ 1000000000 throughput))
-        times (map #(+ (* period-ns %) start-time-ns) (range))]
+        times (map #(+ (* period-ns %) start-time-ns) (range))
+        num-lines 1000
+        text-lines (rand-lines length num-lines)]
     (with-open [p (producer {"bootstrap.servers" kafka-hosts}
                             (byte-array-serializer)
                             (byte-array-serializer))]
@@ -259,7 +264,8 @@
              ;;   (if (> cur (+ t 100))
              ;;     (println "Falling behind by:" (- cur t) "ms")))
             )
-          (send p (record "test-event" (.getBytes (rand-str length)))))))))
+          ;; (send p (record "test-event" (.getBytes (rand-str length)))))))))
+          (send p (record "test-event" (.getBytes (nth text-lines (mod cur num-lines))))))))))
 
 (defn load-lines [file]
   (with-open [rdr (clojure.java.io/reader file)]
@@ -275,7 +281,8 @@
   (let [start-time-ns (* 1000000 (System/currentTimeMillis))
         period-ns (long (/ 1000000000 throughput))
         times (map #(+ (* period-ns %) start-time-ns) (range))
-        file-lines (load-lines input-file)]
+        file-lines (load-lines input-file)
+        num-lines (count file-lines)]
     (with-open [p (producer {"bootstrap.servers" kafka-hosts}
                             (byte-array-serializer)
                             (byte-array-serializer))]
@@ -289,7 +296,8 @@
              ;;   (if (> cur (+ t 100))
              ;;     (println "Falling behind by:" (- cur t) "ms")))
             )
-          (send p (record "test-event" (.getBytes (rand-nth file-lines)))))))))
+          (send p (record "test-event" (.getBytes (nth file-lines (mod cur num-lines))))))))))
+          ;; (send p (record "test-event" (.getBytes (rand-nth file-lines)))))))))
 
 (defn do-new-setup [redis-host]
   ;; Hook up the redis DB
