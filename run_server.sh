@@ -4,7 +4,8 @@ i=1
 LOCAL_TEST=1
 BYTES_LENGTH=1024
 TEXT_LENGTH=1024
-INPUT_FILE=./producer/tom-sawyer.txt
+BOOK_FILE=./resources/tom-sawyer.txt
+PAGEVIEW_FILE=./resources/page-views.txt
 
 if [[ LOCAL_TEST -eq 1 ]] ; then
     CONFIG_PATH="--configPath ./conf/localConf.yaml"
@@ -49,33 +50,45 @@ rand-text-producer() {
     done < "${1:-/dev/stdin}"
 }
 
-file-producer() {
+book-text-producer() {
     while read line; do
         echo "# Starting file producer ($i) with throughput = $line "
-        run_cmd "java -cp .:./producer/* setup.core --file --input-file ${INPUT_FILE} --throughput $line ${CONFIG_PATH} &"
+        run_cmd "java -cp .:./producer/* setup.core --file --input-file ${BOOK_FILE} --throughput $line ${CONFIG_PATH} &"
+        i=$((i+1))
+    done < "${1:-/dev/stdin}"
+}
+
+page-view-producer() {
+    while read line; do
+        echo "# Starting file producer ($i) with throughput = $line "
+        run_cmd "java -cp .:./producer/* setup.core --file --input-file ${PAGEVIEW_FILE} --throughput $line ${CONFIG_PATH} &"
         i=$((i+1))
     done < "${1:-/dev/stdin}"
 }
 
 case "$1" in
     ad)
-        echo "Starting ad-events server"
+        echo "Starting ad-events producer"
         nc -vv -l 7777 | ad-events-producer
         ;;
     bytes)
-        echo "Starting bytes server"
+        echo "Starting bytes producer"
         nc -vv -l 7777 | bytes-producer
         ;;
     rand)
-        echo "Starting rand-text server"
+        echo "Starting rand-text producer"
         nc -vv -l 7777 | rand-text-producer
         ;;
-    file)
-        echo "Starting file server"
-        nc -vv -l 7777 | file-producer
+    book)
+        echo "Starting book-text producer"
+        nc -vv -l 7777 | book-text-producer
+        ;;
+    view)
+        echo "Starting page-view producer"
+        nc -vv -l 7777 | page-view-producer
         ;;
     *)
-        echo "Usage: $0 {ad|bytes|rand|file}"
+        echo "Usage: $0 {ad|bytes|rand|book|view}"
         exit 1
 esac
 
