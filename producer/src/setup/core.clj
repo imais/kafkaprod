@@ -209,7 +209,7 @@
                           (.getBytes (make-kafka-event-at t with-skew? ads user-ids page-ids)))))))))
 ;;                run-callback))))))
 
-(defn send-bytes [throughput length kafka-hosts]
+(defn send-bytes [throughput length topic kafka-hosts]
   (println "Running, emitting" throughput "tuples of length" length "per second.")
   (println "kafka-hosts = " kafka-hosts)
   (let [start-time-ns (* 1000000 (System/currentTimeMillis))
@@ -229,7 +229,7 @@
              ;;     (println "Falling behind by:" (- cur t) "ms")))
             )
           ;; (send p (record "network-test" (make-array Byte/TYPE length))))))))
-          (send p (record "test-event" (make-array Byte/TYPE length))))))))
+          (send p (record topic (make-array Byte/TYPE length))))))))
           ;; (def data (byte-array length))
           ;; (java.util.Arrays/fill data (byte 0x7F))
           ;; (send p (record "comm-test" data)))))))
@@ -243,7 +243,7 @@
 (defn rand-lines [length num-lines]
   (for [x (range num-lines)] (rand-str length)))
 
-(defn send-rand-text [throughput length kafka-hosts]
+(defn send-rand-text [throughput length topic kafka-hosts]
   (println "Running, emitting" throughput "tuples of length" length "per second.")
   (println "kafka-hosts = " kafka-hosts)
   (let [start-time-ns (* 1000000 (System/currentTimeMillis))
@@ -265,7 +265,7 @@
              ;;     (println "Falling behind by:" (- cur t) "ms")))
             )
           ;; (send p (record "test-event" (.getBytes (rand-str length)))))))))
-          (send p (record "test-event" (.getBytes (nth text-lines (mod cur num-lines))))))))))
+          (send p (record topic (.getBytes (nth text-lines (mod cur num-lines))))))))))
 
 (defn load-lines [file]
   (with-open [rdr (clojure.java.io/reader file)]
@@ -275,7 +275,7 @@
   (let [lines (load-lines file)]
     (println (rand-nth lines))))
 
-(defn send-file [throughput input-file kafka-hosts]
+(defn send-file [throughput input-file topic kafka-hosts]
   (println "Running, emitting" throughput "tuples per second using" input-file ".")
   (println "kafka-hosts = " kafka-hosts)
   (let [start-time-ns (* 1000000 (System/currentTimeMillis))
@@ -296,7 +296,7 @@
              ;;   (if (> cur (+ t 100))
              ;;     (println "Falling behind by:" (- cur t) "ms")))
             )
-          (send p (record "test-event" (.getBytes (nth file-lines (mod cur num-lines))))))))))
+          (send p (record topic (.getBytes (nth file-lines (mod cur num-lines))))))))))
           ;; (send p (record "test-event" (.getBytes (rand-nth file-lines)))))))))
 
 (defn do-new-setup [redis-host]
@@ -369,6 +369,9 @@
    ["-i" "--input-file PATH" "Path to input text file"
     :default "./input.txt"
     :parse-fn #(String/valueOf %)]
+   ["-k" "--kafka-topic TOPIC" "Kafka topic"
+    :default "test-event"
+    :parse-fn #(String/valueOf %)]
    ["-w" "--with-skew" "Add minor skew and late tuples into the mix."]
    ["-g" "--get-stats" "Read through redis and collect stats on end-to-end latency and so forth for the real-time simulation."]
    ["-a" "--configPath PATH" "Path to config yaml file"
@@ -387,8 +390,8 @@
       (:check options)                        (check-correct redis-host)
       (:new options)                          (do-new-setup redis-host)
       (:run options)                          (run (:throughput options) (:with-skew options) kafka-hosts redis-host)
-      (:bytes options)                        (send-bytes (:throughput options) (:length options) kafka-hosts)
-      (:rand-text options)                    (send-rand-text (:throughput options) (:length options) kafka-hosts)
-      (:file options)                         (send-file (:throughput options) (:input-file options) kafka-hosts)
+      (:bytes options)                        (send-bytes (:throughput options) (:length options) (:kafka-topic options) kafka-hosts)
+      (:rand-text options)                    (send-rand-text (:throughput options) (:length options) (:kafka-topic options) kafka-hosts)
+      (:file options)                         (send-file (:throughput options) (:input-file options) (:kafka-topic options) kafka-hosts)
       (:get-stats options)                    (get-stats redis-host)
       :else                                   (println summary))))

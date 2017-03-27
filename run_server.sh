@@ -37,7 +37,7 @@ ad-events-producer() {
 bytes-producer() {
     while read line; do
         echo "# Starting bytes producer ($i) with throughput = $line "
-        run_cmd "java -cp .:./producer/* setup.core --bytes --throughput $line --length ${BYTES_LENGTH} ${CONFIG_PATH} &"
+        run_cmd "java -cp .:./producer/* setup.core --bytes --throughput $line --length ${BYTES_LENGTH} --kafka-topic bytes ${CONFIG_PATH} &"
         i=$((i+1))
     done < "${1:-/dev/stdin}"
 }
@@ -45,7 +45,7 @@ bytes-producer() {
 rand-text-producer() {
     while read line; do
         echo "# Starting rand-text producer ($i) with throughput = $line "
-        run_cmd "java -cp .:./producer/* setup.core --rand-text --throughput $line --length ${TEXT_LENGTH} ${CONFIG_PATH} &"
+        run_cmd "java -cp .:./producer/* setup.core --rand-text --throughput $line --length ${TEXT_LENGTH} --kafka-topic rand ${CONFIG_PATH} &"
         i=$((i+1))
     done < "${1:-/dev/stdin}"
 }
@@ -53,7 +53,7 @@ rand-text-producer() {
 book-text-producer() {
     while read line; do
         echo "# Starting file producer ($i) with throughput = $line "
-        run_cmd "java -cp .:./producer/* setup.core --file --input-file ${BOOK_FILE} --throughput $line ${CONFIG_PATH} &"
+        run_cmd "java -cp .:./producer/* setup.core --file --input-file ${BOOK_FILE} --throughput $line --kafka-topic book ${CONFIG_PATH} &"
         i=$((i+1))
     done < "${1:-/dev/stdin}"
 }
@@ -61,7 +61,7 @@ book-text-producer() {
 page-view-producer() {
     while read line; do
         echo "# Starting file producer ($i) with throughput = $line "
-        run_cmd "java -cp .:./producer/* setup.core --file --input-file ${PAGEVIEW_FILE} --throughput $line ${CONFIG_PATH} &"
+        run_cmd "java -cp .:./producer/* setup.core --file --input-file ${PAGEVIEW_FILE} --throughput $line --kafka-topic view ${CONFIG_PATH} &"
         i=$((i+1))
     done < "${1:-/dev/stdin}"
 }
